@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  grokRemainingPercent,
-  type GrokSubscriptionSnapshot,
-} from '../../shared/grok-subscription';
+  openCodeRemainingPercent,
+  type OpenCodeSubscriptionSnapshot,
+} from '../../shared/opencode-subscription';
 import { SubscriptionUsageCard } from './SubscriptionUsageCard';
 import { SubscriptionBrandIcon } from './SubscriptionBrandIcon';
 
-const INITIAL_SNAPSHOT: GrokSubscriptionSnapshot = {
+const INITIAL_SNAPSHOT: OpenCodeSubscriptionSnapshot = {
   status: 'temporarily-unavailable',
   planLabel: null,
   limits: [],
@@ -15,9 +15,9 @@ const INITIAL_SNAPSHOT: GrokSubscriptionSnapshot = {
   message: null,
 };
 
-/** Grok Build allowance read through the official CLI's cached login. */
-export function GrokSubscriptionCard() {
-  const [snapshot, setSnapshot] = useState<GrokSubscriptionSnapshot>(INITIAL_SNAPSHOT);
+/** Compact OpenCode Go subscription allowance summary for the macOS tray. */
+export function OpenCodeSubscriptionCard() {
+  const [snapshot, setSnapshot] = useState<OpenCodeSubscriptionSnapshot>(INITIAL_SNAPSHOT);
   const [loading, setLoading] = useState(true);
   const requestInFlight = useRef(false);
 
@@ -25,12 +25,9 @@ export function GrokSubscriptionCard() {
     if (requestInFlight.current) return;
     requestInFlight.current = true;
     try {
-      setSnapshot(await window.tud.getGrokSubscription());
+      setSnapshot(await window.tud.getOpenCodeSubscription());
     } catch {
-      setSnapshot({
-        ...INITIAL_SNAPSHOT,
-        message: '暂时无法读取 Grok 订阅信息',
-      });
+      setSnapshot({ ...INITIAL_SNAPSHOT, message: '暂时无法读取 OpenCode Go 订阅信息' });
     } finally {
       requestInFlight.current = false;
       setLoading(false);
@@ -47,14 +44,14 @@ export function GrokSubscriptionCard() {
   return (
     <SubscriptionUsageCard
       data={{
-        icon: <SubscriptionBrandIcon brand="grok" />,
+        icon: <SubscriptionBrandIcon brand="opencode" />,
         metrics: snapshot.limits.map((limit, index) => ({
           color: index === 0 && snapshot.limits.length > 1 ? '#7dcf00' : '#2b7eff',
           label: limit.label,
-          remainingPercent: grokRemainingPercent(limit.usedPercent),
+          remainingPercent: openCodeRemainingPercent(limit.usedPercent),
         })),
         stale: snapshot.stale,
-        title: 'Grok',
+        title: 'OpenCode',
       }}
       loading={loading}
     />

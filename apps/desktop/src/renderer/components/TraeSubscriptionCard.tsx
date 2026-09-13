@@ -1,23 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
-  grokRemainingPercent,
-  type GrokSubscriptionSnapshot,
-} from '../../shared/grok-subscription';
+  traeRemainingPercent,
+  type TraeRegion,
+  type TraeSubscriptionSnapshot,
+} from '../../shared/trae-subscription';
 import { SubscriptionUsageCard } from './SubscriptionUsageCard';
 import { SubscriptionBrandIcon } from './SubscriptionBrandIcon';
 
-const INITIAL_SNAPSHOT: GrokSubscriptionSnapshot = {
+const INITIAL_SNAPSHOT: TraeSubscriptionSnapshot = {
   status: 'temporarily-unavailable',
   planLabel: null,
+  region: 'global',
   limits: [],
   fetchedAt: null,
   stale: false,
   message: null,
 };
 
-/** Grok Build allowance read through the official CLI's cached login. */
-export function GrokSubscriptionCard() {
-  const [snapshot, setSnapshot] = useState<GrokSubscriptionSnapshot>(INITIAL_SNAPSHOT);
+interface TraeSubscriptionCardProps {
+  region: TraeRegion;
+  title: string;
+  fetcher: () => Promise<TraeSubscriptionSnapshot>;
+}
+
+/** Compact TRAE IDE entitlement summary for the macOS tray. */
+export function TraeSubscriptionCard({ region, title, fetcher }: TraeSubscriptionCardProps) {
+  const [snapshot, setSnapshot] = useState<TraeSubscriptionSnapshot>({
+    ...INITIAL_SNAPSHOT,
+    region,
+  });
   const [loading, setLoading] = useState(true);
   const requestInFlight = useRef(false);
 
@@ -25,17 +36,14 @@ export function GrokSubscriptionCard() {
     if (requestInFlight.current) return;
     requestInFlight.current = true;
     try {
-      setSnapshot(await window.tud.getGrokSubscription());
+      setSnapshot(await fetcher());
     } catch {
-      setSnapshot({
-        ...INITIAL_SNAPSHOT,
-        message: '暂时无法读取 Grok 订阅信息',
-      });
+      setSnapshot({ ...INITIAL_SNAPSHOT, region, message: '暂时无法读取 TRAE 订阅信息' });
     } finally {
       requestInFlight.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [fetcher, region]);
 
   useEffect(() => {
     void reload();
@@ -47,14 +55,14 @@ export function GrokSubscriptionCard() {
   return (
     <SubscriptionUsageCard
       data={{
-        icon: <SubscriptionBrandIcon brand="grok" />,
+        icon: <SubscriptionBrandIcon brand="trae" />,
         metrics: snapshot.limits.map((limit, index) => ({
-          color: index === 0 && snapshot.limits.length > 1 ? '#7dcf00' : '#2b7eff',
+          color: ['#7dcf00', '#2b7eff', '#f59e0b'][index] ?? '#2b7eff',
           label: limit.label,
-          remainingPercent: grokRemainingPercent(limit.usedPercent),
+          remainingPercent: traeRemainingPercent(limit.usedPercent),
         })),
         stale: snapshot.stale,
-        title: 'Grok',
+        title,
       }}
       loading={loading}
     />
